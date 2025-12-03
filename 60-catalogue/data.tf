@@ -20,5 +20,5 @@ data "aws_ssm_parameter" "catalogue_sg"{
     name = "/${var.project}/${var.environment}/catalogue_sg_id"
 }
 data "aws_ssm_parameter" "backend_alb_arn"{
-    name = "${var.project}-${var.environment}-backend-alb-arn"
+    name = "/${var.project}/${var.environment}/backend-alb-arn"
 }

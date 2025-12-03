@@ -42,7 +42,7 @@ resource "aws_route53_record""backend_alb"{
     
      alias {
     name                   = module.alb.dns_name
-    zone_id                = module.alb.zone_id
+    zone_id                = module.alb.zone_id #here we need to give alb zone id, not our ramana.site zone id
     evaluate_target_health = true
   }
 

@@ -1,9 +1,9 @@
 resource "aws_lb_target_group" "alb-catalogue" {
   name        = "${var.project}-${var.environment}-backend-catalogue"
-  target_type = "alb"
-  port        = 80
-  protocol    = "TCP"
+  port        = 8080
+  protocol    = "HTTP"
   vpc_id      = data.aws_ssm_parameter.vpc_id.value
+  
 
   health_check {
     healthy_threshold = 2
@@ -37,7 +37,7 @@ resource "terraform_data" "catalogue" {
    user="ec2-user" 
    password = "DevOps321"
    type ="ssh"
-   host = aws_instance.catalogue.id
+   host = aws_instance.catalogue.private_ip
   }
 
   provisioner "file" {
@@ -47,7 +47,7 @@ resource "terraform_data" "catalogue" {
 
   provisioner "remote-exec" {
     inline = [
-      "sudo chmmod +x /tmp/catalogue.sh",
+      "sudo chmod +x /tmp/catalogue.sh",
       "sudo sh /tmp/catalogue.sh catalogue ${var.environment}"
     ]
   }
@@ -60,26 +60,27 @@ resource "aws_ec2_instance_state""stop_catalogue"{
 }
 
 resource "aws_ami_from_instance""catalogue"{
-  name = "catalogue"
+  name = "${var.project}-${var.environment}-catalogue"
   source_instance_id = aws_instance.catalogue.id
   depends_on = [aws_ec2_instance_state.stop_catalogue]
 }
 
-resource "terraform_data" "name" {
-  triggers_replace = [aws_ami_from_instance.catalogue]
+resource "terraform_data" "catalogue-delete" {
+  triggers_replace = [aws_instance.catalogue.id]
 
   provisioner "local-exec"{
-       command = "aws ec2 terminate-instances --instance-ids aws_instance.catalogue.id"
+       command = "aws ec2 terminate-instances --instance-ids ${aws_instance.catalogue.id}"
 }
-depends_on = [ aws_instance.catalogue ]
+depends_on = [ aws_ami_from_instance.catalogue ]
 }
 
 resource "aws_launch_template" "catalogue" {
   name =  "${var.project}-${var.environment}-catalogue"
   image_id = aws_ami_from_instance.catalogue.id
-  instance_initiated_shutdown_behavior = "terminate"
+  instance_initiated_shutdown_behavior = "terminate" #to delete the instance if asg decrese the instance count
   instance_type = "t3.micro"
   vpc_security_group_ids = [data.aws_ssm_parameter.catalogue_sg.value]
+  update_default_version = true
 
   tag_specifications {
     resource_type = "instance"
@@ -88,7 +89,7 @@ resource "aws_launch_template" "catalogue" {
       Name =  "${var.project}-${var.environment}-catalogue"
     }
   }
-
+  #volume tags
     tag_specifications{
        resource_type = "volume"
     tags = {
@@ -97,44 +98,94 @@ resource "aws_launch_template" "catalogue" {
   }   
 
   tags = merge(local.tags,{
-    Name = "${var.project}-${var.environment}-"
+    Name = "${var.project}-${var.environment}-catalogue"
   })
 }
-
 resource "aws_autoscaling_group" "catalogue" {
-  name                      = "${var.project}-${var.environment}-catalogue"
-  max_size                  = 10
-  min_size                  = 1
-  health_check_grace_period = 120
+  name                 = "${var.project}-${var.environment}-catalogue"
+  desired_capacity   = 1
+  max_size           = 10
+  min_size           = 1
+  target_group_arns = [aws_lb_target_group.alb-catalogue.arn]
+  vpc_zone_identifier  = split(",",data.aws_ssm_parameter.private_subnet_ids.value)
+  health_check_grace_period = 90
   health_check_type         = "ELB"
-  target_group_arns         =  [aws_lb_target_group.alb-catalogue.arn]
-  vpc_zone_identifier       =   split(",",data.aws_ssm_parameter.private_subnet_ids.value)
+
   launch_template {
     id      = aws_launch_template.catalogue.id
     version = aws_launch_template.catalogue.latest_version
   }
-  tag {
-    key                 = "foo"
-    value               = "bar"
-    propagate_at_launch = true
+
+  dynamic "tag" {
+    for_each = merge(
+      local.tags,
+      {
+        Name = "${var.project}-${var.environment}-catalogue"
+      }
+    )
+    content{
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+    
   }
 
-   instance_refresh {
+  instance_refresh {
     strategy = "Rolling"
     preferences {
       min_healthy_percentage = 50
     }
-    triggers = [aws_launch_template.catalogue.id]
+    triggers = ["launch_template"]
   }
 
-    timeouts {
+  timeouts{
     delete = "15m"
   }
-
 }
 
+# resource "aws_autoscaling_group" "catalogue" {
+#   name                      = "${var.project}-${var.environment}-catalogue"
+#   desired_capacity          = 1
+#   max_size                  = 10
+#   min_size                  = 1
+#   health_check_grace_period = 120
+#   health_check_type         = "ELB"
+#   target_group_arns         =  [aws_lb_target_group.alb-catalogue.arn]
+#   vpc_zone_identifier       =   split(",",data.aws_ssm_parameter.private_subnet_ids.value)
+#   launch_template {
+#     id      = aws_launch_template.catalogue.id
+#     version = aws_launch_template.catalogue.latest_version
+#   }
+#   dynamic tag {
+#     for_each  = merge(local.tags,{
+#       Name = "${var.project}-${var.environment}-catalogue"
+#     })
+#     content{
+#       key                 = tag.key
+#       value               = tag.value
+#       propagate_at_launch = true
+#     }
+     
+    
+#   }
+
+#    instance_refresh {
+#     strategy = "Rolling"
+#     preferences {
+#       min_healthy_percentage = 50
+#     }
+#     triggers = ["launch_template"] #when to trigger the asg, when launch template changes 
+#   }
+
+#     timeouts {
+#     delete = "15m"
+#   }
+
+# }
+
 resource "aws_autoscaling_policy" "catalogue" {
-  autoscaling_group_name = aws_ami_from_instance.catalogue.name
+  autoscaling_group_name = aws_autoscaling_group.catalogue.name
   name                   = "${var.project}-${var.environment}-catalogue"
   policy_type            = "TargetTrackingScaling"
 
@@ -143,11 +194,11 @@ resource "aws_autoscaling_policy" "catalogue" {
       predefined_metric_type = "ASGAverageCPUUtilization"
     }
 
-    target_value =75
+    target_value =75.0
   }
 }
 
-resource "aws_lb_listener_rule" "static" {
+resource "aws_lb_listener_rule" "catalogue-rule" {
   listener_arn = data.aws_ssm_parameter.backend_alb_arn.value
   priority     = 10
 
