@@ -41,7 +41,7 @@ resource "aws_ssm_parameter" "mysql_sg_id" {
 }
 
 resource "aws_ssm_parameter" "rabbitmq_sg_ids"{
-    name = "/${var.project}/${var.environment}/rabbitmq_sg_ids"
+    name = "/${var.project}/${var.environment}/rabbitmq_sg_id"
     type = "String"
     value = module.rabbitmq_sg.sg_id
 }
@@ -50,4 +50,16 @@ resource "aws_ssm_parameter""catalogue_sg_id"{
     name = "/${var.project}/${var.environment}/catalogue_sg_id"
     type = "String"
     value= module.catalogue_sg.sg_id
+}
+
+resource "aws_ssm_parameter""frontend-alb-sg"{
+    name = "/${var.project}/${var.environment}/frontend_alb_sg"
+    type = "String"
+    value = module.frontend_alb_sg.sg_id
+}
+
+resource "aws_ssm_parameter""user_sg_id"{
+    name = "/${var.project}/${var.environment}/user_sg_id"
+    type = "String"
+    value = module.user_sg.sg_id
 }
