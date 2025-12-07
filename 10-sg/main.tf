@@ -569,5 +569,53 @@ resource "security_group_rule" "alb_allowing_cart" {
   source_security_group_id = module.cart_sg.sg_id
   security_group_id = module.backend_alb_sg_sg.sg_id
 }
+resource "security_group_rule" "front_end_ssh_vpn" {
+  type = "ingress"
+  from_out = 22
+  to_port = 22
+  protocol = "tcp"
+  source_security_group_id = module.vpn_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
+resource "security_group_rule" "front_end_ssh_vpn" {
+  type = "ingress"
+  from_out = 80
+  to_port = 80
+  protocol = "tcp"
+  source_security_group_id = module.vpn_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
+resource "security_group_rule" "front_end_ssh_bastion" {
+  type = "ingress"
+  from_out = 22
+  to_port = 22
+  protocol = "tcp"
+  source_security_group_id = module.bastion_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
+resource "security_group_rule" "front_end_ssh_bastion" {
+  type = "ingress"
+  from_out = 80
+  to_port = 80
+  protocol = "tcp"
+  source_security_group_id = module.bastion_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
+resource "security_group_rule" "front_end_ssh_bastion" {
+  type = "ingress"
+  from_out = 80
+  to_port = 80
+  protocol = "tcp"
+  source_security_group_id = module.bastion_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
+resource "security_group_rule" "front_end_alb_frontend" {
+  type = "ingress"
+  from_out = 80
+  to_port = 80
+  protocol = "tcp"
+  source_security_group_id = module.frontend_alb_sg.sg_id
+  security_group_id = module.front_end_sg.sg_id
+}
 
 
