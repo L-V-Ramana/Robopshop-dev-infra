@@ -9,7 +9,7 @@ resource "aws_ssm_parameter""vpc_id"{
 resource "aws_ssm_parameter""public-subnet_id"{
     name = "/${var.project}/${var.environment}/public_subnet_id"
     type  = "StringList"
-    value = join(" , ",module.vpc_dev.public_subnet_id)
+    value = join(",",module.vpc_dev.public_subnet_id)
     overwrite = true
 }
 

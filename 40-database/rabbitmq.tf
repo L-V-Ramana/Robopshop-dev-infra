@@ -40,6 +40,7 @@ resource "aws_route53_record""rabbitmq"{
   zone_id = var.zone_id
   name = "rabbbitmq-${var.environment}.${var.domain_name}"
   records = [aws_instance.rabbitmq.private_ip]
+  allow_overwrite = true
   type = "A"
   ttl =1
 }

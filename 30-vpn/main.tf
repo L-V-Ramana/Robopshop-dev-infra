@@ -23,4 +23,5 @@ resource "aws_route53_record""vpn_record"{
     ttl= 1
     zone_id = var.zone_id
     records = [aws_instance.vpn.public_ip]
+    allow_overwrite = true
 }

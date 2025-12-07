@@ -144,46 +144,6 @@ resource "aws_autoscaling_group" "catalogue" {
   }
 }
 
-# resource "aws_autoscaling_group" "catalogue" {
-#   name                      = "${var.project}-${var.environment}-catalogue"
-#   desired_capacity          = 1
-#   max_size                  = 10
-#   min_size                  = 1
-#   health_check_grace_period = 120
-#   health_check_type         = "ELB"
-#   target_group_arns         =  [aws_lb_target_group.alb-catalogue.arn]
-#   vpc_zone_identifier       =   split(",",data.aws_ssm_parameter.private_subnet_ids.value)
-#   launch_template {
-#     id      = aws_launch_template.catalogue.id
-#     version = aws_launch_template.catalogue.latest_version
-#   }
-#   dynamic tag {
-#     for_each  = merge(local.tags,{
-#       Name = "${var.project}-${var.environment}-catalogue"
-#     })
-#     content{
-#       key                 = tag.key
-#       value               = tag.value
-#       propagate_at_launch = true
-#     }
-     
-    
-#   }
-
-#    instance_refresh {
-#     strategy = "Rolling"
-#     preferences {
-#       min_healthy_percentage = 50
-#     }
-#     triggers = ["launch_template"] #when to trigger the asg, when launch template changes 
-#   }
-
-#     timeouts {
-#     delete = "15m"
-#   }
-
-# }
-
 resource "aws_autoscaling_policy" "catalogue" {
   autoscaling_group_name = aws_autoscaling_group.catalogue.name
   name                   = "${var.project}-${var.environment}-catalogue"

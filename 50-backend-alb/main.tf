@@ -37,6 +37,7 @@ resource "aws_route53_record""backend_alb"{
     name = "*.backend-${var.environment}.ramana.site"
     type = "A"
     zone_id = "Z09108151OJP740F79CO"
+    
 
 
     
